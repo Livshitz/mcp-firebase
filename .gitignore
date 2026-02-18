@@ -1,0 +1,6 @@
+node_modules/
+build/
+.env
+.rtdb-data/
+*.lock
+bun.lockb
