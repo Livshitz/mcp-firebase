@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun run:*)",
+      "mcp__firebase__get_db_keys",
+      "mcp__firebase__get_db",
+      "Bash(bun build:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "firebase"
+  ]
+}

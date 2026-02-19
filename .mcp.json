@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["run", "mcp-firebase/src/cli.ts", "--stdio"]
+    }
+  }
+}
