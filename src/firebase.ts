@@ -3,18 +3,20 @@ import { getDatabase, Database, Reference } from 'firebase-admin/database';
 import { IFirebaseInstance } from './dal';
 
 export class FirebaseModule implements IFirebaseInstance {
-    public firebaseApp: App;
-    private database: Database;
+    public firebaseApp!: App;
+    private database!: Database;
     private basePath: string;
+    private _initialized = false;
 
     public constructor(public options?: Partial<FirebaseModuleOptions>) {
         this.options = { ...new FirebaseModuleOptions(), ...options };
         this.basePath = this.options.basePath || '/';
-        this.initialize();
     }
 
     private initialize(): void {
-        const serviceAccountInput = this.options.serviceAccountPath
+        if (this._initialized) return;
+
+        const serviceAccountInput = this.options!.serviceAccountPath
             || process.env.FIREBASE_SERVICE_ACCOUNT
             || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
@@ -30,12 +32,12 @@ export class FirebaseModule implements IFirebaseInstance {
             serviceAccount = JSON.parse(fs.readFileSync(serviceAccountInput, 'utf8'));
         }
 
-        const databaseURL = this.options.databaseURL || process.env.FIREBASE_DATABASE_URL;
+        const databaseURL = this.options!.databaseURL || process.env.FIREBASE_DATABASE_URL;
         if (!databaseURL) {
             throw new Error('FIREBASE_DATABASE_URL env var or databaseURL option is required');
         }
 
-        const appName = this.options.appName || '[DEFAULT]';
+        const appName = this.options!.appName || '[DEFAULT]';
         let app = getApps().find(a => a.name === appName);
         if (!app) {
             app = initializeApp({ credential: cert(serviceAccount), databaseURL }, appName);
@@ -43,15 +45,30 @@ export class FirebaseModule implements IFirebaseInstance {
 
         this.firebaseApp = app;
         this.database = getDatabase(this.firebaseApp);
+        this._initialized = true;
     }
 
     private ref(path: string): Reference {
+        this.initialize();
         return this.database.ref(this.getPath(path));
     }
 
     async get(path: string): Promise<any> {
         const snapshot = await this.ref(path).once('value');
         return snapshot.val();
+    }
+
+    /** Fetch only the top-level keys at a path using Firebase REST ?shallow=true — no child data downloaded. */
+    async getShallow(path: string): Promise<Record<string, true> | null> {
+        this.initialize();
+        const databaseURL = this.options!.databaseURL || process.env.FIREBASE_DATABASE_URL || '';
+        const resolvedPath = this.getPath(path);
+        const cleanPath = resolvedPath === '/' ? '' : resolvedPath.replace(/\/$/, '');
+        const token = await this.firebaseApp.options.credential!.getAccessToken();
+        const url = `${databaseURL.replace(/\/$/, '')}/${cleanPath}.json?shallow=true&access_token=${token.access_token}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Firebase shallow GET failed: ${res.status} ${await res.text()}`);
+        return res.json();
     }
 
     async set(path: string, data: any): Promise<void> {
@@ -98,6 +115,7 @@ export class FirebaseModule implements IFirebaseInstance {
     }
 
     getDatabase(): Database {
+        this.initialize();
         return this.database;
     }
 }
