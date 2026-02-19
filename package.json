@@ -1,6 +1,6 @@
 {
   "name": "@livx.cc/mcp-firebase",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Standalone Firebase RTDB MCP server — query, update, and manage any Firebase RTDB instance via AI agents",
   "main": "./src/index.ts",
   "bin": {
@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "bun run src/cli.ts --stdio",
     "start": "bun run src/cli.ts --stdio",
-    "publish": "bun publish --access public"
+    "publish-lib": "bun publish --access public"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
