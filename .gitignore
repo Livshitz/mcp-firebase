@@ -4,3 +4,5 @@ build/
 .rtdb-data/
 *.lock
 bun.lockb
+
+database-debug.log
