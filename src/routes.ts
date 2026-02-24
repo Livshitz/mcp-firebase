@@ -125,7 +125,9 @@ export function registerRoutes(
 
     rw.router.get('/db/keys', async (req: IRequest) => {
         const path = q(req.query.path);
-        return await dal.keys(path);
+        const data = await firebase.getShallow(path);
+        if (!data || typeof data !== 'object') return [];
+        return Object.keys(data);
     });
 
     rw.router.post('/db/push', async (req: IRequest) => {
