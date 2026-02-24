@@ -12,7 +12,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(head:*)",
       "Bash(bun test:*)",
-      "Bash(bun:*)"
+      "Bash(bun:*)",
+      "Bash(git add:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
