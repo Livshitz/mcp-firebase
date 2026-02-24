@@ -1,6 +1,6 @@
 {
   "name": "@livx.cc/mcp-firebase",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Standalone Firebase RTDB MCP server — query, update, and manage any Firebase RTDB instance via AI agents",
   "main": "./src/index.ts",
   "bin": {
