@@ -73,7 +73,7 @@ jobs:
       - name: Publish package to npm
         run: bun publish --access public
         env:
-          npm_config_//registry.npmjs.org/:_authToken: ${{ secrets.NPM_TOKEN }}
+          BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create and push tag
         run: |
