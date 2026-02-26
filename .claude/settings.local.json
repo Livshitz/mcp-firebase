@@ -1,5 +1,14 @@
 {
   "permissions": {
+    "ask": [
+      "mcp__firebase__put_db",
+      "mcp__firebase__patch_db",
+      "mcp__firebase__delete_db",
+      "mcp__firebase__post_db_push",
+      "mcp__firebase__post_files_load",
+      "mcp__firebase__post_backup_restore",
+      "mcp__firebase__post_backup"
+    ],
     "allow": [
       "Bash(bun run:*)",
       "mcp__firebase__get_db_keys",
@@ -13,7 +22,8 @@
       "Bash(head:*)",
       "Bash(bun test:*)",
       "Bash(bun:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm show:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

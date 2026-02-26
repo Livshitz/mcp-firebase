@@ -268,6 +268,7 @@ export function registerRoutes(
             path: { description: 'RTDB path to write to', required: true },
             body: { description: 'JSON data to set at the path' },
         },
+        annotations: { readOnlyHint: false, destructiveHint: true },
     });
     rw.describeMCP('/db', 'PATCH', {
         description: 'Merge-update data at an RTDB path (shallow merge). Auto-backs up the path before writing and appends an audit entry.',
@@ -275,10 +276,12 @@ export function registerRoutes(
             path: { description: 'RTDB path to update', required: true },
             body: { description: 'JSON data to merge at the path' },
         },
+        annotations: { readOnlyHint: false, destructiveHint: false },
     });
     rw.describeMCP('/db', 'DELETE', {
         description: 'Remove data at an RTDB path. Auto-backs up the path before deleting and appends an audit entry.',
         params: { path: { description: 'RTDB path to delete', required: true } },
+        annotations: { readOnlyHint: false, destructiveHint: true },
     });
     rw.describeMCP('/db/list', 'GET', {
         description: 'List children at an RTDB path as an array. Returns metadata + file path (use file-reading tools to inspect data). WARNING: Downloads all child data. Use get_db_keys first to check how many children exist before calling this.',
@@ -294,6 +297,7 @@ export function registerRoutes(
             path: { description: 'RTDB path to push to', required: true },
             body: { description: 'JSON data for the new child' },
         },
+        annotations: { readOnlyHint: false, destructiveHint: false },
     });
     rw.describeMCP('/db/query', 'GET', {
         description: 'Query RTDB with orderBy, equalTo, limitToFirst, limitToLast, startAt, endAt. Returns metadata + file path (use file-reading tools to inspect data).',
@@ -314,6 +318,7 @@ export function registerRoutes(
     rw.describeMCP('/files/load', 'POST', {
         description: 'Load a local YAML file back to RTDB (uses _path from file). Appends an audit entry.',
         params: { body: { description: 'JSON with "filename" (the YAML file name)' } },
+        annotations: { readOnlyHint: false, destructiveHint: true },
     });
     rw.describeMCP('/files/list', 'GET', {
         description: 'List local YAML dump files.',
@@ -340,6 +345,7 @@ export function registerRoutes(
     rw.describeMCP('/backup/restore', 'POST', {
         description: 'Restore a backup file to RTDB. Use to recover from a failed or unwanted operation. The backup\'s _path field determines where data is written.',
         params: { body: { description: 'JSON with "filename" (backup filename from backup/list)' } },
+        annotations: { readOnlyHint: false, destructiveHint: true },
     });
     rw.describeMCP('/audit/list', 'GET', {
         description: 'List recent audit entries for write operations. Most recent first.',
