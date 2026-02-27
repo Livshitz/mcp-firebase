@@ -6,3 +6,4 @@ build/
 bun.lockb
 
 database-debug.log
+database.rules.json
