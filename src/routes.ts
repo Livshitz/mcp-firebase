@@ -83,7 +83,13 @@ export function registerRoutes(
     audit: AuditLog | null,
     backup: BackupManager | null,
     runtimeInfo: Record<string, any> = {},
+    options: { readOnly?: boolean } = {},
 ) {
+    const readOnly = options.readOnly ?? false;
+
+    function guardWrite() {
+        if (readOnly) throw { status: 403, message: 'Read-only mode is enabled. Disable readOnly in mcp-firebase config to allow writes.' };
+    }
 
     // --- DB CRUD ---
 
@@ -96,6 +102,7 @@ export function registerRoutes(
     });
 
     rw.router.put('/db', async (req: IRequest) => {
+        guardWrite();
         const path = q(req.query.path);
         const body = await req.json();
         const { auditEntry } = await withAudit('put', path, audit, backup, () => firebase.set(path, body));
@@ -103,6 +110,7 @@ export function registerRoutes(
     });
 
     rw.router.patch('/db', async (req: IRequest) => {
+        guardWrite();
         const path = q(req.query.path);
         const body = await req.json();
         const { auditEntry } = await withAudit('patch', path, audit, backup, () => firebase.update(path, body));
@@ -110,6 +118,7 @@ export function registerRoutes(
     });
 
     rw.router.delete('/db', async (req: IRequest) => {
+        guardWrite();
         const path = q(req.query.path);
         const { auditEntry } = await withAudit('delete', path, audit, backup, () => firebase.delete(path));
         return { ok: true, deleted: path, ...auditEntry };
@@ -131,6 +140,7 @@ export function registerRoutes(
     });
 
     rw.router.post('/db/push', async (req: IRequest) => {
+        guardWrite();
         const path = q(req.query.path);
         const body = await req.json();
         let key: string | null = null;
@@ -164,6 +174,7 @@ export function registerRoutes(
     });
 
     rw.router.post('/files/load', async (req: IRequest) => {
+        guardWrite();
         const body = await req.json();
         const filename = body.filename;
         if (!filename) throw { status: 400, message: 'filename is required in body' };
@@ -208,6 +219,7 @@ export function registerRoutes(
     });
 
     rw.router.post('/backup/restore', async (req: IRequest) => {
+        guardWrite();
         if (!backup) throw { status: 503, message: 'backup is disabled' };
         const body = await req.json();
         const filename = body.filename;

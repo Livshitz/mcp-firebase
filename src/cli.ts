@@ -66,6 +66,11 @@ const backup = backupEnabled
       )
     : null;
 
+// --- Read-only mode (default: true) ---
+const readOnly = localConfig.readOnly !== undefined
+    ? localConfig.readOnly !== false
+    : process.env.MCP_READONLY !== 'false';
+
 const runtimeInfo = {
     cwd: process.cwd(),
     localConfigPath: existsSync(localConfigPath) ? localConfigPath : null,
@@ -74,19 +79,20 @@ const runtimeInfo = {
     workDir,
     dumps: localDir,
     cache: fileCache.dir,
+    readOnly,
     audit: audit ? { enabled: true, logFile: audit.options.logFile } : { enabled: false },
     backup: backup ? { enabled: true, dir: backup.options.dir, operations: backup.options.operations } : { enabled: false },
     databaseURL: process.env.FIREBASE_DATABASE_URL || null,
 };
 
 const rw = RouterWrapper.getNew('/api');
-registerRoutes(rw, firebase, dal, yamlSync, fileCache, audit, backup, runtimeInfo);
+registerRoutes(rw, firebase, dal, yamlSync, fileCache, audit, backup, runtimeInfo, { readOnly });
 
 const mcp = rw.asMCP({
     name: 'mcp-firebase',
     version: '0.1.0',
     instructions: `You are connected to a Firebase Realtime Database (RTDB) via mcp-firebase.
-
+${readOnly ? '\n⚠️ READ-ONLY MODE is active. All write operations (put, patch, delete, push, load, restore) are blocked. To enable writes, set readOnly: false in mcp-firebase.json or MCP_READONLY=false env var.\n' : ''}
 Best practices — follow these always:
 - NEVER fetch a path with shallow=false or use get_db_list without first checking its size.
   Always call get_db_keys or get_db (shallow=true, the default) first to see how many children exist.
@@ -97,6 +103,8 @@ Best practices — follow these always:
 - Use get_db_keys to check existence and count before iterating over a collection.
 - When looking for a specific record, use get_db_query with equalTo instead of downloading the whole collection.`,
 });
+
+if (readOnly) console.log('[mcp-firebase] Read-only mode: writes are blocked');
 
 if (process.argv.includes('--stdio')) {
     mcp.serveStdio();
