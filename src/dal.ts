@@ -69,9 +69,9 @@ export class RtdbDAL {
 
   private generateKey(): string {
     const PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-    const now = Date.now();
+    let ts = Date.now();
     let key = '';
-    for (let i = 0; i < 8; i++) key = PUSH_CHARS.charAt(now % 64) + key;
+    for (let i = 0; i < 8; i++) { key = PUSH_CHARS.charAt(ts % 64) + key; ts = Math.floor(ts / 64); }
     for (let i = 0; i < 12; i++) key += PUSH_CHARS.charAt(Math.floor(Math.random() * 64));
     return key;
   }
