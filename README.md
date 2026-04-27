@@ -6,7 +6,7 @@ Also usable as an importable library.
 
 ## Quick Start
 
-**From npm (recommended):** package [`@livx.cc/mcp-firebase`](https://www.npmjs.com/package/@livx.cc/mcp-firebase). Run with project root as cwd so `mcp-firebase.json` resolves.
+**From npm (recommended):** package [`@livx.cc/mcp-firebase`](https://www.npmjs.com/package/@livx.cc/mcp-firebase). Start the process with the **project root** as the current working directory so **`mcp-firebase.json`** is found (see below).
 
 ```bash
 # MCP stdio (installs/updates the package; -y = non-interactive)
@@ -19,58 +19,21 @@ bunx -y @livx.cc/mcp-firebase
 **From a clone of this repo:**
 
 ```bash
-# MCP stdio mode — loads .env from mcp-firebase.json / cwd
+# MCP stdio mode — loads .env via mcp-firebase.json / flags (see below)
 bun run src/cli.ts --stdio
 
-# Explicit .env path
+# If mcp-firebase.json has no envPath, you can pass .env here instead
 bun run src/cli.ts --stdio --env-path /path/to/.env
 
 # HTTP mode (REST + MCP endpoint)
 bun run src/cli.ts
 ```
 
-## Cursor (project MCP)
+## mcp-firebase.json
 
-1. **Open the app folder as the workspace root** — the same directory that will contain `mcp-firebase.json` (and usually your app’s `.env` or the path in `envPath`). `${workspaceFolder}` in the config below is that root.
-2. **Install [Bun](https://bun.sh)** so `bunx` is available on your PATH (this package is run via the published `mcp-firebase` bin with Bun).
-3. Add **`.cursor/mcp.json`**:
+**Every app** that uses this MCP should have a **`mcp-firebase.json` in the project root** (same folder you use as `cwd` when starting the server). Cursor, Claude Code, and CLI all read the same file — it is **not** IDE-specific.
 
-```json
-{
-  "mcpServers": {
-    "mcp-firebase": {
-      "type": "stdio",
-      "command": "bunx",
-      "args": ["-y", "@livx.cc/mcp-firebase", "--stdio"],
-      "cwd": "${workspaceFolder}"
-    }
-  }
-}
-```
-
-4. **Configure RTDB** — add **`mcp-firebase.json`** at the project root (next to `.cursor/`) and point **`envPath`** at the `.env` that sets `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_DATABASE_URL` (or `FIREBASE_CONFIG`). See [Environment Variables](#environment-variables) and the **per-project** JSON example in [Claude Code Config](#claude-code-config) (the same `mcp-firebase.json` applies to Cursor).
-5. **Reload** the Cursor window (or restart Cursor) so the server starts. If tools do not appear, open the **Output** panel, choose **MCP** or **MCP Logs** in the dropdown, and check for connection errors.
-
-Optional: pin a version, e.g. `"args": ["-y", "@livx.cc/mcp-firebase@0.1.12", "--stdio"]`.  
-Optional: a **user-wide** config at `~/.cursor/mcp.json` uses the same shape; the **project** file overrides per [Cursor’s MCP docs](https://cursor.com/docs/mcp).
-
-## Claude Code Config
-
-**Global** — add to `~/.claude.json` once, works in all projects (loads `.env` from each project's cwd):
-
-```json
-{
-  "mcpServers": {
-    "firebase": {
-      "type": "stdio",
-      "command": "bun",
-      "args": ["run", "/path/to/mcp-firebase/src/cli.ts", "--stdio"]
-    }
-  }
-}
-```
-
-**Per-project override** — create `mcp-firebase.json` in the project root:
+Example:
 
 ```json
 {
@@ -81,10 +44,14 @@ Optional: a **user-wide** config at `~/.cursor/mcp.json` uses the same shape; th
 }
 ```
 
+- **`envPath`** — Path to the `.env` file for this app (relative to project root). Should define RTDB credentials; see [Environment variables](#environment-variables).
+- **`basePath`** — Optional RTDB path prefix (default `/`).
+- **`workDir`** — Optional root for cache, dumps, backups, audit (default `.mcp-firebase/`).
 - **`readOnly`:** `true` blocks write tools (`put_db`, `patch_db`, `delete_db`, `post_db_push`, `post_files_load`, `post_backup_restore`). `false` allows them. If the key is omitted, use env `MCP_READONLY`: writes are allowed only when `MCP_READONLY=false`; otherwise the server is read-only.
-- All fields are optional. Priority: `mcp-firebase.json` > `--env-path` flag > env vars > defaults.
 
-**Directory layout** — everything under `workDir` (default: `.mcp-firebase/`):
+All keys are optional. **Priority:** `mcp-firebase.json` > CLI `--env-path` > environment > built-in defaults.
+
+**Directory layout** (under `workDir`, default `.mcp-firebase/`):
 
 ```
 .mcp-firebase/
@@ -111,7 +78,9 @@ Override individual dirs if needed:
 
 `backup.operations` controls which write ops trigger an automatic pre-op snapshot. `push` is excluded by default (append-only; rollback is a delete). Add it explicitly if needed.
 
-## Environment Variables
+## Environment variables
+
+Loaded from the file pointed to by `envPath` in `mcp-firebase.json` (or `--env-path` / `.env`).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -123,6 +92,49 @@ Override individual dirs if needed:
 | `RTDB_LOCAL_DIR` | No | Directory for YAML dump files (default: under `workDir`, see above) |
 
 \*Required for RTDB access. `FIREBASE_SERVICE_ACCOUNT` auto-detects format: if the value starts with `{`, it's parsed as JSON; otherwise treated as a file path.
+
+## Cursor
+
+1. Add **`mcp-firebase.json`** at the app root and set **`envPath`** (and any other options) as in the **mcp-firebase.json** section above.
+2. **Open that app folder as the workspace root** — `${workspaceFolder}` in the snippet below must be the directory that contains `mcp-firebase.json`.
+3. **Install [Bun](https://bun.sh)** so `bunx` is on your PATH.
+4. Add **`.cursor/mcp.json`**:
+
+```json
+{
+  "mcpServers": {
+    "mcp-firebase": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["-y", "@livx.cc/mcp-firebase", "--stdio"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+5. **Reload** the Cursor window (or restart Cursor). If tools do not appear, open **Output** and select **MCP** or **MCP Logs** for errors.
+
+Optional: pin a version, e.g. `"args": ["-y", "@livx.cc/mcp-firebase@0.1.13", "--stdio"]`.  
+Optional: **user-wide** `~/.cursor/mcp.json` uses the same shape; the **project** file wins over global per [Cursor’s MCP docs](https://cursor.com/docs/mcp).
+
+## Claude Code
+
+**Global** — add to `~/.claude.json` once. Each project still uses its own **`mcp-firebase.json`** at the repo root when you open that repo (process `cwd` is the project):
+
+```json
+{
+  "mcpServers": {
+    "firebase": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["run", "/path/to/mcp-firebase/src/cli.ts", "--stdio"]
+    }
+  }
+}
+```
+
+For a published install you can point `args` at `bunx` + `@livx.cc/mcp-firebase` + `--stdio` the same way as [Cursor](#cursor), or use a local clone path as above.
 
 ## MCP Tools
 
