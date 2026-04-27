@@ -90,7 +90,7 @@ registerRoutes(rw, firebase, dal, yamlSync, fileCache, audit, backup, runtimeInf
 
 const mcp = rw.asMCP({
     name: 'mcp-firebase',
-    version: '0.1.0',
+    version: '0.1.12',
     instructions: `You are connected to a Firebase Realtime Database (RTDB) via mcp-firebase.
 ${readOnly ? '\n⚠️ READ-ONLY MODE is active. All write operations (put, patch, delete, push, load, restore) are blocked. To enable writes, set readOnly: false in mcp-firebase.json or MCP_READONLY=false env var.\n' : ''}
 Best practices — follow these always:

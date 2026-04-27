@@ -1,13 +1,25 @@
 # mcp-firebase
 
-Standalone MCP server for Firebase Realtime Database. Gives AI agents (Claude Code, etc.) full RTDB read/write/query access, plus local YAML file dump/load for debugging.
+Standalone MCP server for Firebase Realtime Database. Use it from **Cursor**, **Claude Code**, or any MCP host. Full RTDB read/write/query access, plus local YAML dump/load for debugging.
 
 Also usable as an importable library.
 
 ## Quick Start
 
+**From npm (recommended):** package [`@livx.cc/mcp-firebase`](https://www.npmjs.com/package/@livx.cc/mcp-firebase). Run with project root as cwd so `mcp-firebase.json` resolves.
+
 ```bash
-# MCP stdio mode — loads .env from cwd automatically
+# MCP stdio (installs/updates the package; -y = non-interactive)
+bunx -y @livx.cc/mcp-firebase --stdio
+
+# HTTP mode (REST + `/api/mcp`); PORT defaults to 3456
+bunx -y @livx.cc/mcp-firebase
+```
+
+**From a clone of this repo:**
+
+```bash
+# MCP stdio mode — loads .env from mcp-firebase.json / cwd
 bun run src/cli.ts --stdio
 
 # Explicit .env path
@@ -16,6 +28,31 @@ bun run src/cli.ts --stdio --env-path /path/to/.env
 # HTTP mode (REST + MCP endpoint)
 bun run src/cli.ts
 ```
+
+## Cursor (project MCP)
+
+1. **Open the app folder as the workspace root** — the same directory that will contain `mcp-firebase.json` (and usually your app’s `.env` or the path in `envPath`). `${workspaceFolder}` in the config below is that root.
+2. **Install [Bun](https://bun.sh)** so `bunx` is available on your PATH (this package is run via the published `mcp-firebase` bin with Bun).
+3. Add **`.cursor/mcp.json`**:
+
+```json
+{
+  "mcpServers": {
+    "mcp-firebase": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["-y", "@livx.cc/mcp-firebase", "--stdio"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+4. **Configure RTDB** — add **`mcp-firebase.json`** at the project root (next to `.cursor/`) and point **`envPath`** at the `.env` that sets `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_DATABASE_URL` (or `FIREBASE_CONFIG`). See [Environment Variables](#environment-variables) and the **per-project** JSON example in [Claude Code Config](#claude-code-config) (the same `mcp-firebase.json` applies to Cursor).
+5. **Reload** the Cursor window (or restart Cursor) so the server starts. If tools do not appear, open the **Output** panel, choose **MCP** or **MCP Logs** in the dropdown, and check for connection errors.
+
+Optional: pin a version, e.g. `"args": ["-y", "@livx.cc/mcp-firebase@0.1.12", "--stdio"]`.  
+Optional: a **user-wide** config at `~/.cursor/mcp.json` uses the same shape; the **project** file overrides per [Cursor’s MCP docs](https://cursor.com/docs/mcp).
 
 ## Claude Code Config
 
@@ -39,11 +76,13 @@ bun run src/cli.ts
 {
   "envPath": "./config/.env.firebase",
   "basePath": "/myApp",
-  "workDir": ".mcp-firebase"
+  "workDir": ".mcp-firebase",
+  "readOnly": true
 }
 ```
 
-All fields are optional. Priority: `mcp-firebase.json` > `--env-path` flag > env vars > defaults.
+- **`readOnly`:** `true` blocks write tools (`put_db`, `patch_db`, `delete_db`, `post_db_push`, `post_files_load`, `post_backup_restore`). `false` allows them. If the key is omitted, use env `MCP_READONLY`: writes are allowed only when `MCP_READONLY=false`; otherwise the server is read-only.
+- All fields are optional. Priority: `mcp-firebase.json` > `--env-path` flag > env vars > defaults.
 
 **Directory layout** — everything under `workDir` (default: `.mcp-firebase/`):
 
@@ -76,16 +115,18 @@ Override individual dirs if needed:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `FIREBASE_SERVICE_ACCOUNT` | Yes | Path to service account JSON file, or the JSON string itself |
-| `FIREBASE_DATABASE_URL` | Yes | Firebase RTDB URL |
-| `RTDB_BASE_PATH` | No | Path prefix for all operations (default: `/`) |
-| `RTDB_LOCAL_DIR` | No | Directory for YAML dump files (default: `.mcp-firebase/dumps/`) |
+| `FIREBASE_SERVICE_ACCOUNT` | Yes* | Path to service account JSON file, or the JSON string itself |
+| `FIREBASE_DATABASE_URL` | Yes* | Firebase RTDB URL |
+| `FIREBASE_CONFIG` | No | If set and `FIREBASE_DATABASE_URL` is missing, `databaseURL` is read from this JSON (same shape as Firebase client config) |
+| `MCP_READONLY` | No | When `mcp-firebase.json` has no `readOnly` key: if `MCP_READONLY=false`, writes are allowed; otherwise read-only (default) |
+| `RTDB_BASE_PATH` | No | Path prefix for all operations (default: `/`; override via `mcp-firebase.json` `basePath`) |
+| `RTDB_LOCAL_DIR` | No | Directory for YAML dump files (default: under `workDir`, see above) |
 
-`FIREBASE_SERVICE_ACCOUNT` auto-detects format: if the value starts with `{`, it's parsed as JSON; otherwise treated as a file path.
+\*Required for RTDB access. `FIREBASE_SERVICE_ACCOUNT` auto-detects format: if the value starts with `{`, it's parsed as JSON; otherwise treated as a file path.
 
 ## MCP Tools
 
-The server sends best-practice `instructions` to the agent on connect (via the MCP `initialize` response). Claude Code injects these into the system prompt automatically — no slash command needed. Instructions cover: always check size before fetching, use `get_db_keys` first, prefer queries over full downloads for large collections.
+The server sends best-practice `instructions` to the agent on connect (via the MCP `initialize` response). The host (e.g. Cursor or Claude Code) may add these to the agent context — no extra slash command is required in the default setup. Instructions cover: always check size before fetching, use `get_db_keys` first, prefer queries over full downloads for large collections.
 
 ### Database Operations
 
@@ -135,7 +176,7 @@ The server sends best-practice `instructions` to the agent on connect (via the M
 ## Library Usage
 
 ```typescript
-import { FirebaseModule, RtdbDAL, BaseRepository, AuditLog, BackupManager, YamlSync } from 'mcp-firebase';
+import { FirebaseModule, RtdbDAL, BaseRepository, AuditLog, BackupManager, YamlSync } from '@livx.cc/mcp-firebase';
 
 const firebase = new FirebaseModule({
   serviceAccountPath: './service-account.json',
@@ -172,10 +213,10 @@ await users.update('abc', { name: 'Bob' });
 
 ## Audit & Backup
 
-Every write op (`put`, `patch`, `delete`, `push`, `load`) appends a JSON line to `.mcp-firebase/audit/audit.jsonl`:
+Every write op (`put`, `patch`, `delete`, `push`, `load`) appends a JSON line to the configured audit file (default: `.mcp-firebase/audit/audit.jsonl`):
 
 ```json
-{ "id": "2026-02-18T12-00-00-000Z", "ts": "2026-02-18T12:00:00.000Z", "op": "delete", "path": "users/abc", "status": "ok", "backupFile": ".rtdb-backups/delete_users.abc_2026-02-18T12-00-00-000Z.yaml", "durationMs": 42 }
+{ "id": "2026-02-18T12-00-00-000Z", "ts": "2026-02-18T12:00:00.000Z", "op": "delete", "path": "users/abc", "status": "ok", "backupFile": ".mcp-firebase/backups/delete_users.abc_2026-02-18T12-00-00-000Z.yaml", "durationMs": 42 }
 ```
 
 The `backupFile` field correlates the audit entry to its pre-op snapshot. Backup filenames encode `{op}_{path}_{timestamp}.yaml`.
