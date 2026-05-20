@@ -48,6 +48,14 @@ export class FirebaseModule implements IFirebaseInstance {
         this._initialized = true;
     }
 
+    async destroy(): Promise<void> {
+        if (this._initialized && this.firebaseApp) {
+            const { deleteApp } = await import('firebase-admin/app');
+            await deleteApp(this.firebaseApp);
+            this._initialized = false;
+        }
+    }
+
     private ref(path: string): Reference {
         this.initialize();
         return this.database.ref(this.getPath(path));
