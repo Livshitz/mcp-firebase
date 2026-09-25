@@ -11,6 +11,20 @@ import { readFileSync, existsSync } from 'fs';
 /** Extract first value from query param (may be string or string[]) */
 const q = (v: any, fallback = ''): string => (Array.isArray(v) ? v[0] : v) || fallback;
 
+/**
+ * Parse + validate a write payload. A missing/null body (e.g. payload sent under the wrong param name)
+ * would otherwise reach firebase.set as null = silent DELETE, reported as ok.
+ * Use delete_db to remove data; to write an empty value, write it at a parent path explicitly.
+ */
+async function requireBody(req: IRequest, allowedQuery: string[] = ['path']): Promise<any> {
+    const unknown = Object.keys(req.query || {}).filter((k) => !allowedQuery.includes(k));
+    if (unknown.length) throw { status: 400, message: `Unknown param(s): ${unknown.join(', ')}. Send the payload as "body".` };
+    const body = await req.json().catch(() => undefined);
+    if (body === undefined || body === null) throw { status: 400, message: '"body" is required (use delete_db to remove data).' };
+    if (typeof body === 'object' && !Array.isArray(body) && Object.keys(body).length === 0) throw { status: 400, message: '"body" is an empty object; nothing to write.' };
+    return body;
+}
+
 /** Shallow summary of data: top-level keys with type/count metadata */
 function shallowSummary(data: any): any {
     if (!data || typeof data !== 'object') return data;
@@ -104,7 +118,7 @@ export function registerRoutes(
     rw.router.put('/db', async (req: IRequest) => {
         guardWrite();
         const path = q(req.query.path);
-        const body = await req.json();
+        const body = await requireBody(req);
         const { auditEntry } = await withAudit('put', path, audit, backup, () => firebase.set(path, body));
         return { ok: true, path, ...auditEntry };
     });
@@ -112,7 +126,7 @@ export function registerRoutes(
     rw.router.patch('/db', async (req: IRequest) => {
         guardWrite();
         const path = q(req.query.path);
-        const body = await req.json();
+        const body = await requireBody(req);
         const { auditEntry } = await withAudit('patch', path, audit, backup, () => firebase.update(path, body));
         return { ok: true, path, ...auditEntry };
     });
@@ -142,7 +156,7 @@ export function registerRoutes(
     rw.router.post('/db/push', async (req: IRequest) => {
         guardWrite();
         const path = q(req.query.path);
-        const body = await req.json();
+        const body = await requireBody(req);
         let key: string | null = null;
         const { auditEntry } = await withAudit('push', path, audit, backup, async () => {
             key = await firebase.push(path, body);
@@ -278,7 +292,7 @@ export function registerRoutes(
         description: 'Set (replace) data at an RTDB path. Auto-backs up the path before writing and appends an audit entry.',
         params: {
             path: { description: 'RTDB path to write to', required: true },
-            body: { description: 'JSON data to set at the path' },
+            body: { description: 'JSON data to set at the path', required: true },
         },
         annotations: { readOnlyHint: false, destructiveHint: true },
     });
@@ -286,7 +300,7 @@ export function registerRoutes(
         description: 'Merge-update data at an RTDB path (shallow merge). Auto-backs up the path before writing and appends an audit entry.',
         params: {
             path: { description: 'RTDB path to update', required: true },
-            body: { description: 'JSON data to merge at the path' },
+            body: { description: 'JSON data to merge at the path', required: true },
         },
         annotations: { readOnlyHint: false, destructiveHint: false },
     });
@@ -307,7 +321,7 @@ export function registerRoutes(
         description: 'Push a new child with auto-generated key at an RTDB path. Appends an audit entry.',
         params: {
             path: { description: 'RTDB path to push to', required: true },
-            body: { description: 'JSON data for the new child' },
+            body: { description: 'JSON data for the new child', required: true },
         },
         annotations: { readOnlyHint: false, destructiveHint: false },
     });

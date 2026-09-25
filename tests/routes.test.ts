@@ -157,6 +157,28 @@ describe('routes.ts', () => {
             const stored = await fb.get('users');
             expect(stored).toEqual({ u1: { name: 'Alice' } });
         });
+        it('rejects a missing body instead of deleting the path', async () => {
+            await fb.set('users', { u1: { name: 'Alice' } });
+            const handler = rw.getHandler('PUT', '/db');
+            await expect(handler(makeReq({ path: 'users' }))).rejects.toMatchObject({ status: 400 });
+            expect(await fb.get('users')).toEqual({ u1: { name: 'Alice' } });
+        });
+
+        it('rejects the payload under an unknown param (e.g. "data")', async () => {
+            const handler = rw.getHandler('PUT', '/db');
+            await expect(handler(makeReq({ path: 'users', data: '{"a":1}' }))).rejects.toMatchObject({ status: 400 });
+        });
+
+        it('rejects an empty object body', async () => {
+            const handler = rw.getHandler('PATCH', '/db');
+            await expect(handler(makeReq({ path: 'users' }, {}))).rejects.toMatchObject({ status: 400 });
+        });
+
+        it('allows primitive bodies like false or 0', async () => {
+            const handler = rw.getHandler('PUT', '/db');
+            await handler(makeReq({ path: 'flag' }, false));
+            expect(await fb.get('flag')).toBe(false);
+        });
     });
 
     describe('PATCH /db', () => {
